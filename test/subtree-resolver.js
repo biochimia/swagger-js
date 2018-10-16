@@ -722,4 +722,95 @@ describe('subtree $ref resolver', () => {
       }
     })
   })
+  test('should normalize after resolving references that affect document structure', async () => {
+    const input = {
+      openapi: '3.0.0',
+      'paths.yaml': {
+        'root': {
+          parameters: [
+            {$ref: '#/parameters.yaml/accept-header'}
+          ],
+          get: {
+            parameters: [
+              {$ref: '#/parameters.yaml/name'},
+              {$ref: '#/parameters.yaml/status'}
+            ]
+          }
+        }
+      },
+      'parameters.yaml': {
+        'accept-header': {
+          name: 'accept',
+          in: 'header',
+          description: 'content-type for response',
+          required: true,
+          type: 'string'
+        },
+        name: {
+          name: 'name',
+          in: 'formData',
+          description: 'name of the pet',
+          required: false,
+          type: 'string'
+        },
+        status: {
+          name: 'status',
+          in: 'formData',
+          description: 'status of the pet',
+          required: false,
+          type: 'string'
+        }
+      },
+      paths: {
+        '/': {$ref: '#/paths.yaml/root'}
+      }
+    }
+
+    const res = await resolve(input, ['paths', '/'], {})
+
+    expect(res).toEqual({
+      errors: [],
+      spec: {
+        $$ref: '#/paths.yaml/root',
+        parameters: [
+          {
+            $$ref: '#/parameters.yaml/accept-header',
+            name: 'accept',
+            in: 'header',
+            description: 'content-type for response',
+            required: true,
+            type: 'string'
+          }
+        ],
+        get: {
+          parameters: [
+            {
+              $$ref: '#/parameters.yaml/name',
+              name: 'name',
+              in: 'formData',
+              description: 'name of the pet',
+              required: false,
+              type: 'string'
+            },
+            {
+              $$ref: '#/parameters.yaml/status',
+              name: 'status',
+              in: 'formData',
+              description: 'status of the pet',
+              required: false,
+              type: 'string'
+            },
+            {
+              $$ref: '#/parameters.yaml/accept-header',
+              name: 'accept',
+              in: 'header',
+              description: 'content-type for response',
+              required: true,
+              type: 'string'
+            }
+          ]
+        }
+      }
+    })
+  })
 })
